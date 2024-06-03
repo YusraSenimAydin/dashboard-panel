@@ -1,14 +1,21 @@
-import { BrowserRouter as Router, Route, Switch } from 'react-router-dom';
-import Dashboard from './components/Dashboard/Dashboard';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import Sidebar from './components/Sidebar';
+import Orders from './pages/Orders';
+import PastOrders from './pages/PastOrders';
 
-const App = () => {
+function App() {
   return (
-    <Router>
-      <Switch>
-        <Route exact path="/" element={<Dashboard />} />
-      </Switch>
-    </Router>
+    <div className="flex">
+      <Sidebar />
+      <div className="flex-grow p-4">
+        <Routes>
+          <Route path="/" element={<Navigate to="/orders" />} />
+          <Route path="/orders" element={<Orders />} />
+          <Route path="/past-orders" element={<PastOrders />} />
+        </Routes>
+      </div>
+    </div>
   );
-};
+}
 
 export default App;
