@@ -1,5 +1,5 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { Table, Breadcrumb, Button, Modal } from 'antd';
+import { Table, Button, Modal } from 'antd';
 import { useState } from 'react';
 import { setCurrentOrder } from '../features/orders/ordersSlice';
 
@@ -9,6 +9,8 @@ const PastOrders = () => {
   const currentOrder = useSelector(state => state.orders.currentOrder);
 
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
 
   const handleViewDetails = (order) => {
     dispatch(setCurrentOrder(order));
@@ -41,8 +43,19 @@ const PastOrders = () => {
 
   return (
     <div className="p-4">
-      <Breadcrumb items={[{ title: 'Geçmiş Siparişler' }]} />
-      <Table columns={columns} dataSource={pastOrders} rowKey="id" />
+     <h2 className="text-xl font-bold mb-4">Geçmiş Siparişler</h2>
+      <Table columns={columns} 
+      dataSource={pastOrders} 
+      rowKey="id" 
+      pagination={{
+        current: currentPage,
+        pageSize: pageSize,
+        onChange: (page, pageSize) => {
+          setCurrentPage(page);
+          setPageSize(pageSize);
+        },
+      }}
+      />
 
       {currentOrder && (
         <Modal

@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { completeOrder, setCurrentOrder, addPayment, resetPayments } from '../features/orders/ordersSlice';
-import { Table, Breadcrumb, Button, Modal, Input, message } from 'antd';
+import { Table, Button, Modal, Input, message } from 'antd';
 import { useState } from 'react';
 
 const Orders = () => {
@@ -12,6 +12,8 @@ const Orders = () => {
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [paymentInputs, setPaymentInputs] = useState([{ id: 1, amount: 0 }]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(8);
 
   const handleCompleteOrder = (order) => {
     dispatch(setCurrentOrder(order));
@@ -78,14 +80,6 @@ const Orders = () => {
     }
   };
 
-  const handleInputFocus = (id) => {
-    setPaymentInputs(
-      paymentInputs.map((input) =>
-        input.id === id ? { ...input, amount: '' } : input
-      )
-    );
-  };
-
   const totalPaid = paymentAmounts.reduce((acc, amount) => acc + amount, 0);
 
   const columns = [
@@ -113,9 +107,21 @@ const Orders = () => {
 
   return (
     <div className="p-4">
-      <Breadcrumb items={[{ title: 'Siparişler' }]} />
-      <Table columns={columns} dataSource={orders} rowKey="id" />
-
+      <h2>Siparişler</h2>
+      <Table
+        columns={columns}
+        dataSource={orders}
+        rowKey="id"
+        pagination={{
+          current: currentPage,
+          pageSize: pageSize,
+          onChange: (page, pageSize) => {
+            setCurrentPage(page);
+            setPageSize(pageSize);
+          },
+        }}
+      />
+      
       {currentOrder && (
         <>
           <Modal
@@ -137,11 +143,11 @@ const Orders = () => {
                 <Input
                   type="number"
                   value={input.amount}
-                  onFocus={() => handleInputFocus(input.id)}
                   onChange={(e) => handleInputChange(input.id, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(e, input.id)}
                   placeholder="Ödeme Miktarı"
                   className="mr-2"
+                  min="0"
                 />
                 <Button onClick={() => handleAddPayment(input.id)}>Öde</Button>
               </div>
@@ -149,7 +155,7 @@ const Orders = () => {
             <Button onClick={handleAddInput}>Yeni Ödeme Ekle</Button>
             <div className="mb-4 mt-4">
               <strong>Ödenen Miktarlar:</strong>
-              <ul className="list-disc pl-5">
+              <ul>
                 {paymentAmounts.map((amount, index) => (
                   <li key={index}>₺{amount}</li>
                 ))}
