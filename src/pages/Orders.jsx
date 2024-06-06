@@ -1,6 +1,6 @@
 import { useDispatch, useSelector } from 'react-redux';
-import { completeOrder, setCurrentOrder, addPayment, resetPayments } from '../features/orders/ordersSlice';
-import { Table, Button, Modal, Input, message } from 'antd';
+import { completeOrder, setCurrentOrder, addPayment, updatePayment, deletePayment, resetPayments } from '../features/orders/ordersSlice';
+import { Table, Button, Modal, Input, message, Space } from 'antd';
 import { useState } from 'react';
 
 const Orders = () => {
@@ -11,9 +11,12 @@ const Orders = () => {
 
   const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [paymentInputs, setPaymentInputs] = useState([{ id: 1, amount: 0 }]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editAmount, setEditAmount] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(8);
+  const [paymentAmount, setPaymentAmount] = useState('');
 
   const handleCompleteOrder = (order) => {
     dispatch(setCurrentOrder(order));
@@ -26,12 +29,11 @@ const Orders = () => {
   };
 
   const handleCompleteOk = () => {
-    const totalPaid = paymentAmounts.reduce((acc, amount) => acc + amount, 0);
+    const totalPaid = paymentAmounts.reduce((acc, payment) => acc + payment.amount, 0);
     if (totalPaid === currentOrder.totalPrice) {
       dispatch(completeOrder(currentOrder.id));
       setIsCompleteModalOpen(false);
       dispatch(resetPayments());
-      setPaymentInputs([{ id: 1, amount: 0 }]);
     } else {
       message.error('Ödenen miktar toplam fiyatla eşleşmiyor!');
     }
@@ -40,47 +42,67 @@ const Orders = () => {
   const handleCompleteCancel = () => {
     setIsCompleteModalOpen(false);
     dispatch(resetPayments());
-    setPaymentInputs([{ id: 1, amount: 0 }]);
   };
 
   const handleDetailsCancel = () => {
     setIsDetailsModalOpen(false);
   };
 
-  const handleAddPayment = (id) => {
-    const input = paymentInputs.find((input) => input.id === id);
-    if (input && input.amount > 0) {
-      dispatch(addPayment(Number(input.amount)));
-      setPaymentInputs(
-        paymentInputs.map((input) =>
-          input.id === id ? { ...input, amount: 0 } : input
-        )
-      );
+  const handleAddPayment = () => {
+    if (paymentAmount) {
+      dispatch(addPayment({ id: paymentAmounts.length, amount: Number(paymentAmount) }));
+      setPaymentAmount('');
+    } else {
+      message.error('Lütfen geçerli bir ödeme miktarı girin.');
     }
   };
 
-  const handleAddInput = () => {
-    setPaymentInputs([
-      ...paymentInputs,
-      { id: paymentInputs.length + 1, amount: 0 },
-    ]);
+  const handleEditPayment = (id, amount) => {
+    setEditingId(id);
+    setEditAmount(amount);
+    setIsEditModalOpen(true);
   };
 
-  const handleInputChange = (id, value) => {
-    setPaymentInputs(
-      paymentInputs.map((input) =>
-        input.id === id ? { ...input, amount: value } : input
-      )
-    );
+  const handleUpdatePayment = () => {
+    dispatch(updatePayment({ id: editingId, amount: Number(editAmount) }));
+    setEditingId(null);
+    setEditAmount(null);
+    setIsEditModalOpen(false);
   };
 
-  const handleKeyDown = (event, id) => {
+  const handleDeletePayment = (id) => {
+    dispatch(deletePayment(id));
+  };
+
+  const handlePaymentKeyPress = (event) => {
     if (event.key === 'Enter') {
-      handleAddPayment(id);
+      handleAddPayment();
     }
   };
 
-  const totalPaid = paymentAmounts.reduce((acc, amount) => acc + amount, 0);
+  const handleEditKeyPress = (event) => {
+    if (event.key === 'Enter') {
+      handleUpdatePayment();
+    }
+  };
+
+  const paymentColumns = [
+    {
+      title: 'Ödenen Miktar',
+      dataIndex: 'amount',
+      key: 'amount',
+    },
+    {
+      title: 'Action',
+      key: 'action',
+      render: (text, record) => (
+        <Space size="middle">
+          <Button type="link" onClick={() => handleEditPayment(record.id, record.amount)}>Düzenle</Button>
+          <Button type="link" onClick={() => handleDeletePayment(record.id)}>Sil</Button>
+        </Space>
+      ),
+    },
+  ];
 
   const columns = [
     {
@@ -97,17 +119,17 @@ const Orders = () => {
       title: 'Action',
       key: 'action',
       render: (text, record) => (
-        <span>
+        <Space size="middle">
           <Button type="link" onClick={() => handleViewDetails(record)}>Detaylar</Button>
           <Button type="link" onClick={() => handleCompleteOrder(record)}>Tamamlandı</Button>
-        </span>
+        </Space>
       ),
     },
   ];
 
   return (
     <div className="p-4">
-      <h2>Siparişler</h2>
+      <h2 className="text-xl font-bold mb-4">Siparişler</h2>
       <Table
         columns={columns}
         dataSource={orders}
@@ -121,7 +143,7 @@ const Orders = () => {
           },
         }}
       />
-      
+
       {currentOrder && (
         <>
           <Modal
@@ -138,35 +160,52 @@ const Orders = () => {
               </Button>,
             ]}
           >
-            {paymentInputs.map((input) => (
-              <div className="flex items-center mb-4" key={input.id}>
-                <Input
-                  type="number"
-                  value={input.amount}
-                  onChange={(e) => handleInputChange(input.id, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(e, input.id)}
-                  placeholder="Ödeme Miktarı"
-                  className="mr-2"
-                  min="0"
-                />
-                <Button onClick={() => handleAddPayment(input.id)}>Öde</Button>
-              </div>
-            ))}
-            <Button onClick={handleAddInput}>Yeni Ödeme Ekle</Button>
-            <div className="mb-4 mt-4">
-              <strong>Ödenen Miktarlar:</strong>
-              <ul>
-                {paymentAmounts.map((amount, index) => (
-                  <li key={index}>₺{amount}</li>
-                ))}
-              </ul>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Input
+                type="number"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="Ödeme miktarı"
+                min="0"
+                onKeyPress={handlePaymentKeyPress}
+              />
+              <Button onClick={handleAddPayment}>Öde</Button>
             </div>
+            <Table
+              columns={paymentColumns}
+              dataSource={paymentAmounts.map((payment, index) => ({ ...payment, key: index }))}
+              pagination={false}
+              style={{ marginTop: '16px' }}
+            />
             <div>
               <strong>Toplam Fiyat:</strong> ₺{currentOrder.totalPrice}
             </div>
             <div>
-              <strong>Ödenen Toplam Miktar:</strong> ₺{totalPaid}
+              <strong>Ödenen Toplam Miktar:</strong> ₺{paymentAmounts.reduce((acc, payment) => acc + payment.amount, 0)}
             </div>
+          </Modal>
+
+          <Modal
+            title="Ödeme Düzenle"
+            open={isEditModalOpen}
+            onOk={handleUpdatePayment}
+            onCancel={() => setIsEditModalOpen(false)}
+            footer={[
+              <Button key="cancel" onClick={() => setIsEditModalOpen(false)}>
+                İptal
+              </Button>,
+              <Button key="save" type="primary" onClick={handleUpdatePayment}>
+                Kaydet
+              </Button>,
+            ]}
+          >
+            <Input
+              type="number"
+              value={editAmount}
+              onChange={(e) => setEditAmount(e.target.value)}
+              min="0"
+              onKeyPress={handleEditKeyPress}
+            />
           </Modal>
 
           <Modal
